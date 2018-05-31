@@ -1,6 +1,8 @@
 from __future__ import division
 import ldscore.sumstats as s
 import ldscore.parse as ps
+from ldsc import parser
+
 import unittest
 import numpy as np
 import pandas as pd
@@ -9,7 +11,6 @@ from nose.tools import *
 from numpy.testing import assert_array_equal, assert_array_almost_equal, assert_allclose
 from nose.plugins.attrib import attr
 import os
-from ldsc import parser
 
 DIR = os.path.dirname(__file__)
 N_REP = 200
@@ -26,7 +27,7 @@ class Mock(object):
 
     def log(self, x):
         # pass
-        print x
+        print(x)
 
 log = Mock()
 args = Mock()
@@ -43,16 +44,13 @@ def test_check_condnum():
 
 
 def test_check_variance():
-    ld = pd.DataFrame({'SNP': ['a', 'b', 'c'],
-                       'LD1': np.ones(3).astype(float),
-                       'LD2': np.arange(3).astype(float)})
-    ld = ld[['SNP', 'LD1', 'LD2']]
+    ld = pd.DataFrame(np.vstack((np.ones(3), np.arange(3))).T)
     M_annot = np.array([[1, 2]])
-    M_annot, ld, novar_col = s._check_variance(log, M_annot, ld)
+    M_annot, ld, novar_cols = s._check_variance(log, M_annot, ld)
     assert_array_equal(M_annot.shape, (1, 1))
     assert_array_equal(M_annot, [[2]])
-    assert_allclose(ld.iloc[:, 1], [0, 1, 2])
-    assert_array_equal(novar_col, [True, False])
+    assert_array_equal(ld.iloc[:, 0].values, [0.0, 1, 2])
+    assert_array_equal(set(novar_cols), {True, False})
 
 
 def test_align_alleles():
@@ -65,7 +63,7 @@ def test_align_alleles():
 def test_filter_bad_alleles():
     alleles = pd.Series(['ATAT', 'ATAG', 'DIID', 'ACAC'])
     bad_alleles = s._filter_alleles(alleles)
-    print bad_alleles
+    print(bad_alleles)
     assert_series_equal(bad_alleles, pd.Series([False, False, False, True]))
 
 
@@ -90,7 +88,7 @@ def test_valid_snps():
 
 
 def test_bases():
-    x = set(['A', 'T', 'G', 'C'])
+    x = {'A', 'T', 'G', 'C'}
     assert_equal(x, set(s.BASES))
 
 
@@ -201,77 +199,77 @@ class Test_RG_Statistical():
         args.ref_ld = DIR + '/simulate_test/ldscore/twold_onefile'
         args.w_ld = DIR + '/simulate_test/ldscore/w'
         args.rg = ','.join(
-            (DIR + '/simulate_test/sumstats/' + str(i) for i in xrange(N_REP)))
+            (DIR + '/simulate_test/sumstats/' + str(i) for i in range(N_REP)))
         args.out = DIR + '/simulate_test/1'
         x = s.estimate_rg(args, log)
-        args.intercept_gencov = ','.join(('0' for _ in xrange(N_REP)))
-        args.intercept_h2 = ','.join(('1' for _ in xrange(N_REP)))
+        args.intercept_gencov = ','.join(('0' for _ in range(N_REP)))
+        args.intercept_h2 = ','.join(('1' for _ in range(N_REP)))
         y = s.estimate_rg(args, log)
         cls.rg = x
         cls.rg_noint = y
 
     def test_rg_ratio(self):
-        assert_allclose(np.nanmean(map(t('rg_ratio'), self.rg)), 0, atol=0.02)
+        assert_allclose(np.nanmean(list(map(t('rg_ratio'), self.rg))), 0, atol=0.02)
 
     def test_rg_ratio_noint(self):
         assert_allclose(
-            np.nanmean(map(t('rg_ratio'), self.rg_noint)), 0, atol=0.02)
+            np.nanmean(list(map(t('rg_ratio'), self.rg_noint))), 0, atol=0.02)
 
     def test_rg_se(self):
-        assert_allclose(np.nanmean(map(t('rg_se'), self.rg)), np.nanstd(
-            map(t('rg_ratio'), self.rg)), atol=0.02)
+        assert_allclose(np.nanmean(list(map(t('rg_se'), self.rg))), np.nanstd(
+            list(map(t('rg_ratio'), self.rg))), atol=0.02)
 
     def test_rg_se_noint(self):
-        assert_allclose(np.nanmean(map(t('rg_se'), self.rg_noint)), np.nanstd(
-            map(t('rg_ratio'), self.rg_noint)), atol=0.02)
+        assert_allclose(np.nanmean(list(map(t('rg_se'), self.rg_noint))), np.nanstd(
+            list(map(t('rg_ratio'), self.rg_noint))), atol=0.02)
 
     def test_gencov_tot(self):
         assert_allclose(
-            np.nanmean(map(t('tot'), map(t('gencov'), self.rg))), 0, atol=0.02)
+            np.nanmean(list(map(t('tot'), map(t('gencov'), self.rg)))), 0, atol=0.02)
 
     def test_gencov_tot_noint(self):
         assert_allclose(
-            np.nanmean(map(t('tot'), map(t('gencov'), self.rg_noint))), 0, atol=0.02)
+            np.nanmean(list(map(t('tot'), map(t('gencov'), self.rg_noint)))), 0, atol=0.02)
 
     def test_gencov_tot_se(self):
-        assert_allclose(np.nanstd(map(t('tot'), map(t('gencov'), self.rg))), np.nanmean(
-            map(t('tot_se'), map(t('gencov'), self.rg))), atol=0.02)
+        assert_allclose(np.nanstd(list(map(t('tot'), map(t('gencov'), self.rg)))),
+                        np.nanmean(list(map(t('tot_se'), map(t('gencov'), self.rg)))), atol=0.02)
 
     def test_gencov_tot_se_noint(self):
-        assert_allclose(np.nanstd(map(t('tot'), map(t('gencov'), self.rg_noint))), np.nanmean(
-            map(t('tot_se'), map(t('gencov'), self.rg_noint))), atol=0.02)
+        assert_allclose(np.nanstd(list(map(t('tot'), map(t('gencov'), self.rg_noint)))),
+                        np.nanmean(list(map(t('tot_se'), map(t('gencov'), self.rg_noint)))), atol=0.02)
 
     def test_gencov_cat(self):
         assert_allclose(
-            np.nanmean(map(t('cat'), map(t('gencov'), self.rg))), [0, 0], atol=0.02)
+            np.nanmean(list(map(t('cat'), map(t('gencov'), self.rg)))), [0, 0], atol=0.02)
 
     def test_gencov_cat_noint(self):
         assert_allclose(
-            np.nanmean(map(t('cat'), map(t('gencov'), self.rg_noint))), [0, 0], atol=0.02)
+            np.nanmean(list(map(t('cat'), map(t('gencov'), self.rg_noint)))), [0, 0], atol=0.02)
 
     def test_gencov_cat_se(self):
-        assert_allclose(np.nanstd(map(t('cat'), map(t('gencov'), self.rg))), np.nanmean(
-            map(t('cat_se'), map(t('gencov'), self.rg))), atol=0.02)
+        assert_allclose(np.nanstd(list(map(t('cat'), map(t('gencov'), self.rg)))),
+                        np.nanmean(list(map(t('cat_se'), map(t('gencov'), self.rg)))), atol=0.02)
 
     def test_gencov_cat_se_noint(self):
-        assert_allclose(np.nanstd(map(t('cat'), map(t('gencov'), self.rg_noint))), np.nanmean(
-            map(t('cat_se'), map(t('gencov'), self.rg_noint))), atol=0.02)
+        assert_allclose(np.nanstd(list(map(t('cat'), map(t('gencov'), self.rg_noint)))),
+                        np.nanmean(list(map(t('cat_se'), map(t('gencov'), self.rg_noint)))), atol=0.02)
 
     def test_gencov_int(self):
         assert_allclose(
-            np.nanmean(map(t('intercept'), map(t('gencov'), self.rg))), 0, atol=0.1)
+            np.nanmean(list(map(t('intercept'), map(t('gencov'), self.rg)))), 0, atol=0.1)
 
     def test_gencov_int_se(self):
-        assert_allclose(np.nanmean(map(t('intercept_se'), map(t('gencov'), self.rg))), np.nanstd(
-            map(t('intercept'), map(t('gencov'), self.rg))), atol=0.1)
+        assert_allclose(np.nanmean(list(map(t('intercept_se'), map(t('gencov'), self.rg)))),
+                        np.nanstd(list(map(t('intercept'), map(t('gencov'), self.rg)))), atol=0.1)
 
     def test_hsq_int(self):
         assert_allclose(
-            np.nanmean(map(t('intercept'), map(t('hsq2'), self.rg))), 1, atol=0.1)
+            np.nanmean(list(map(t('intercept'), map(t('hsq2'), self.rg)))), 1, atol=0.1)
 
     def test_hsq_int_se(self):
-        assert_allclose(np.nanmean(map(t('intercept_se'), map(t('hsq2'), self.rg))), np.nanstd(
-            map(t('intercept'), map(t('hsq2'), self.rg))), atol=0.1)
+        assert_allclose(np.nanmean(list(map(t('intercept_se'), map(t('hsq2'), self.rg)))),
+                        np.nanstd( list(map(t('intercept'), map(t('hsq2'), self.rg)))), atol=0.1)
 
 
 @attr('h2')
@@ -286,7 +284,7 @@ class Test_H2_Statistical(unittest.TestCase):
         args.chisq_max = 99999
         h2 = []
         h2_noint = []
-        for i in xrange(N_REP):
+        for i in range(N_REP):
             args.intercept_h2 = None
             args.h2 = DIR + '/simulate_test/sumstats/' + str(i)
             args.out = DIR + '/simulate_test/1'
@@ -298,65 +296,66 @@ class Test_H2_Statistical(unittest.TestCase):
         cls.h2_noint = h2_noint
 
     def test_tot(self):
-        assert_allclose(np.nanmean(map(t('tot'), self.h2)), 0.9, atol=0.05)
+        assert_allclose(np.nanmean(list(map(t('tot'), self.h2))), 0.9, atol=0.05)
 
     def test_tot_noint(self):
         assert_allclose(
-            np.nanmean(map(t('tot'), self.h2_noint)), 0.9, atol=0.05)
+            np.nanmean(list(map(t('tot'), self.h2_noint))), 0.9, atol=0.05)
 
     def test_tot_se(self):
-        assert_allclose(np.nanmean(map(t('tot_se'), self.h2)), np.nanstd(
-            map(t('tot'), self.h2)), atol=0.05)
+        assert_allclose(np.nanmean(list(map(t('tot_se'), self.h2))), np.nanstd(
+            list(map(t('tot'), self.h2))), atol=0.05)
 
     def test_tot_se_noint(self):
-        assert_allclose(np.nanmean(map(t('tot_se'), self.h2_noint)), np.nanstd(
-            map(t('tot'), self.h2_noint)), atol=0.05)
+        assert_allclose(np.nanmean(list(map(t('tot_se'), self.h2_noint))), np.nanstd(
+            list(map(t('tot'), self.h2_noint))), atol=0.05)
 
     def test_cat(self):
-        x = np.nanmean(map(t('cat'), self.h2_noint), axis=0)
+        x = np.nanmean(list(map(t('cat'), self.h2)), axis=0)
         y = np.array((0.3, 0.6)).reshape(x.shape)
         assert_allclose(x, y, atol=0.05)
 
     def test_cat_noint(self):
-        x = np.nanmean(map(t('cat'), self.h2_noint), axis=0)
+        x = np.nanmean(list(map(t('cat'), self.h2_noint)), axis=0)
         y = np.array((0.3, 0.6)).reshape(x.shape)
         assert_allclose(x, y, atol=0.05)
 
     def test_cat_se(self):
-        x = np.nanmean(map(t('cat_se'), self.h2), axis=0)
-        y = np.nanstd(map(t('cat'), self.h2), axis=0).reshape(x.shape)
+        x = np.nanmean(list(map(t('cat_se'), self.h2)), axis=0)
+        y = np.nanstd(list(map(t('cat'), self.h2)), axis=0).reshape(x.shape)
         assert_allclose(x, y, atol=0.05)
 
     def test_cat_se_noint(self):
-        x = np.nanmean(map(t('cat_se'), self.h2_noint), axis=0)
-        y = np.nanstd(map(t('cat'), self.h2_noint), axis=0).reshape(x.shape)
+        x = np.nanmean(list(map(t('cat_se'), self.h2_noint)), axis=0)
+        y = np.nanstd(list(map(t('cat'), self.h2_noint)), axis=0).reshape(x.shape)
         assert_allclose(x, y, atol=0.05)
 
     def test_coef(self):
         # should be h^2/M = [[0.3, 0.9]] / M
         coef = np.array(((0.3, 0.9))) / self.h2[0].M
         for h in [self.h2, self.h2_noint]:
-            assert np.all(np.abs(np.nanmean(map(t('coef'), h), axis=0) - coef) < 1e6)
+            assert np.all(np.abs(np.nanmean(list(map(t('coef'), h)), axis=0) - coef) < 1e6)
 
     def test_coef_se(self):
         for h in [self.h2, self.h2_noint]:
-            assert_array_almost_equal(np.nanmean(map(t('coef_se'), h), axis=0),
-                                      np.nanstd(map(t('coef'), h), axis=0))
+            assert_array_almost_equal(np.nanmean(list(map(t('coef_se'), h)), axis=0),
+                                      np.nanstd(list(map(t('coef'), h)), axis=0))
 
     def test_prop(self):
         for h in [self.h2, self.h2_noint]:
-            assert np.all(np.nanmean(map(t('prop'), h), axis=0) - [1/3, 2/3] < 0.02)
+            assert np.all(np.nanmean(list(map(t('prop'), h)), axis=0) - [1/3, 2/3] < 0.02)
 
     def test_prop_se(self):
         for h in [self.h2, self.h2_noint]:
-            assert np.all(np.nanmean(map(t('prop_se'), h), axis=0) - np.nanstd(map(t('prop'), h), axis=0) < 0.02)
+            assert np.all(np.nanmean(list(map(t('prop_se'), h)), axis=0) - np.nanstd(list(map(t('prop'), h)),
+                                                                                     axis=0) < 0.02)
 
     def test_int(self):
-        assert_allclose(np.nanmean(map(t('intercept'), self.h2)), 1, atol=0.1)
+        assert_allclose(np.nanmean(list(map(t('intercept'), self.h2))), 1, atol=0.1)
 
     def test_int_se(self):
-        assert_allclose(np.nanstd(map(t('intercept'), self.h2)), np.nanmean(
-            map(t('intercept_se'), self.h2)), atol=0.1)
+        assert_allclose(np.nanstd(list(map(t('intercept'), self.h2))), np.nanmean(
+            list(map(t('intercept_se'), self.h2))), atol=0.1)
 
 
 class Test_Estimate(unittest.TestCase):
@@ -393,6 +392,7 @@ class Test_Estimate(unittest.TestCase):
         args.ref_ld_chr = DIR + '/simulate_test/ldscore/twold_firstfile,' + \
             DIR + '/simulate_test/ldscore/twold_secondfile'
         z = s.estimate_h2(args, log)
+
         assert_almost_equal(x.tot, y.tot)
         assert_array_almost_equal(y.cat, z.cat)
         assert_array_almost_equal(x.prop, y.prop)
@@ -409,11 +409,12 @@ class Test_Estimate(unittest.TestCase):
         args.ref_ld = DIR + '/simulate_test/ldscore/oneld_onefile'
         args.w_ld = DIR + '/simulate_test/ldscore/w'
         args.rg = ','.join(
-            [DIR + '/simulate_test/sumstats/1' for _ in xrange(2)])
+            [DIR + '/simulate_test/sumstats/1' for _ in range(2)])
         args.out = DIR + '/simulate_test/1'
         x = s.estimate_rg(args, log)[0]
-        args.M = open(
-            DIR + '/simulate_test/ldscore/oneld_onefile.l2.M_5_50', 'rb').read().rstrip('\n')
+        with open(os.path.join(DIR, 'simulate_test/ldscore/oneld_onefile.l2.M_5_50'), 'rb') as f:
+            args.M = f.read().decode().rstrip('\n')
+        f.close()
         y = s.estimate_rg(args, log)[0]
         assert_array_almost_equal(x.rg_ratio, y.rg_ratio)
         assert_array_almost_equal(x.rg_se, y.rg_se)
@@ -427,7 +428,7 @@ class Test_Estimate(unittest.TestCase):
         args.ref_ld_chr = DIR + '/simulate_test/ldscore/twold_onefile'
         args.w_ld = DIR + '/simulate_test/ldscore/w'
         args.rg = ','.join(
-            [DIR + '/simulate_test/sumstats/1' for _ in xrange(2)])
+            [DIR + '/simulate_test/sumstats/1' for _ in range(2)])
         args.out = DIR + '/simulate_test/1'
         args.print_cov = True  # right now just check no runtime errors
         args.print_delete_vals = True
@@ -447,7 +448,7 @@ class Test_Estimate(unittest.TestCase):
         args.ref_ld = DIR + '/simulate_test/ldscore/oneld_onefile'
         args.w_ld = DIR + '/simulate_test/ldscore/w'
         args.rg = ','.join(
-            [DIR + '/simulate_test/sumstats/1' for _ in xrange(2)])
+            [DIR + '/simulate_test/sumstats/1' for _ in range(2)])
         args.out = DIR + '/simulate_test/1'
         x = s.estimate_rg(args, log)[0]
         args.no_check_alleles = True
@@ -477,7 +478,7 @@ class Test_Estimate(unittest.TestCase):
         args.ref_ld_chr = DIR + '/simulate_test/ldscore/oneld_onefile'
         args.w_ld = DIR + '/simulate_test/ldscore/w'
         args.rg = ','.join(
-            [DIR + '/simulate_test/sumstats/1' for _ in xrange(2)])
+            [DIR + '/simulate_test/sumstats/1' for _ in range(2)])
         args.out = DIR + '/simulate_test/rg'
         args.two_step = 999
         x = s.estimate_rg(args, log)[0]
