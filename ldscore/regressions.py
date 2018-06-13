@@ -167,7 +167,7 @@ class LD_Score_Regression(object):
             yp = y
         else:
             yp = y - intercept
-            self.intercept_se = 'NA'
+            self.intercept_se = None
         del y
 
         self.twostep_filtered = None
@@ -379,8 +379,8 @@ class Hsq(LD_Score_Regression):
             ratio_se = intercept_se / (mean_chisq - 1)
             ratio = (intercept - 1) / (mean_chisq - 1)
         else:
-            ratio = 'NA'
-            ratio_se = 'NA'
+            ratio = None
+            ratio_se = None
 
         return ratio, ratio_se
 
