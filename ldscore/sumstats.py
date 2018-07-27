@@ -230,7 +230,7 @@ def _read_ld_sumstats(args, log, fh, alleles=False, dropna=True, sumstats=pd.Dat
         sumstats = _read_sumstats(args, log, fh, alleles=alleles, dropna=dropna)
     ref_ld = _read_ref_ld(args, log)
     n_annot = len(ref_ld.columns) - 1
-    M_annot = _read_M(args, log, n_annot)
+    M_annot = _read_M(args, n_annot)
     M_annot, ref_ld, novar_cols = _check_variance(log, M_annot, ref_ld)
     w_ld = _read_w_ld(args, log)
     sumstats = _merge_and_log(ref_ld, sumstats, 'reference panel LD', log)
