@@ -208,34 +208,34 @@ class __GenotypeArrayInMemory__(object):
                 # block_size can't increase more than c
                 # block_size can't be less than c unless it is zero
                 # both of these things make sense
-                A = np.hstack((A[:, old_b-b+c:old_b], B))
-                l_A += old_b-b+c
+                A = np.hstack((A[:, int(old_b-b+c):int(old_b)], B))
+                l_A += int(old_b-b+c)
             elif l_B == b0 and b > 0:
-                A = A[:, b0-b:b0]
-                l_A = b0-b
+                A = A[:, int(b0-b):int(b0)]
+                l_A = int(b0-b)
             elif b == 0:  # no SNPs to left in window, e.g., after a sequence gap
                 A = np.array(()).reshape((n, 0))
                 l_A = l_B
             if l_B == md:
-                c = m - md
-                rfuncAB = np.zeros((b, c))
+                c = int(m - md)
+                rfuncAB = np.zeros((int(b), c))
                 rfuncBB = np.zeros((c, c))
             if b != old_b:
-                rfuncAB = np.zeros((b, c))
+                rfuncAB = np.zeros((int(b), c))
 
             B = snp_getter(c)
-            p1 = np.all(annot[l_A:l_A+b, :] == 0)
-            p2 = np.all(annot[l_B:l_B+c, :] == 0)
+            p1 = np.all(annot[l_A:int(l_A+b), :] == 0)
+            p2 = np.all(annot[l_B:int(l_B+c), :] == 0)
             if p1 and p2:
                 continue
 
             np.dot(A.T, B / n, out=rfuncAB)
             rfuncAB = func(rfuncAB)
-            cor_sum[l_A:l_A+b, :] += np.dot(rfuncAB, annot[l_B:l_B+c, :])
-            cor_sum[l_B:l_B+c, :] += np.dot(annot[l_A:l_A+b, :].T, rfuncAB).T
+            cor_sum[l_A:int(l_A+b), :] += np.dot(rfuncAB, annot[l_B:int(l_B+c), :])
+            cor_sum[l_B:int(l_B+c), :] += np.dot(annot[l_A:int(l_A+b), :].T, rfuncAB).T
             np.dot(B.T, B / n, out=rfuncBB)
             rfuncBB = func(rfuncBB)
-            cor_sum[l_B:l_B+c, :] += np.dot(rfuncBB, annot[l_B:l_B+c, :])
+            cor_sum[l_B:int(l_B+c), :] += np.dot(rfuncBB, annot[l_B:int(l_B+c), :])
 
         return cor_sum
 
