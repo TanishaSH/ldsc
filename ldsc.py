@@ -8,7 +8,7 @@ LDSC is a command line tool for estimating
 
 '''
 from __future__ import division
-import ldscore as ld
+import ldscore.ldscore as ld
 import ldscore.parse as ps
 import ldscore.sumstats as sumstats
 import ldscore.regressions as reg
@@ -18,6 +18,7 @@ import functools
 from subprocess import call
 from itertools import product
 import time, sys, traceback, argparse
+
 
 __version__ = '1.0.0'
 MASTHEAD = "*********************************************************************\n"
@@ -148,10 +149,9 @@ def ldscore(args, log):
         keep_snps = __filter__(args.extract, 'SNPs', 'include', array_snps)
         annot_matrix, annot_colnames, n_annot = None, None, 1
 
-
     elif args.cts_bin is not None and args.cts_breaks is not None:  # --cts-bin
         cts_fnames = args.cts_bin.split(',')  # read filenames
-        args.cts_breaks = args.cts_breaks.replace('N','-')  # replace N with negative sign
+        args.cts_breaks = args.cts_breaks.replace('N', '-')  # replace N with negative sign
         try:  # split on x
             breaks = [[float(x) for x in y.split(',')] for y in args.cts_breaks.split('x')]
         except ValueError as e:
@@ -174,7 +174,7 @@ def ldscore(args, log):
 
         cts_levs = []
         full_labs = []
-        for i,fh in enumerate(cts_fnames):
+        for i, fh in enumerate(cts_fnames):
             vec = ps.read_cts(cts_fnames[i], array_snps.df.SNP.values)
 
             max_cts = np.max(vec)
@@ -224,10 +224,10 @@ def ldscore(args, log):
         annot_matrix = annot_matrix[sorted(annot_matrix.columns, key=annot_sort_key)]
         if len(cts_colnames) > 1:
             # flatten multi-index
-            annot_colnames = ['_'.join([cts_colnames[i]+'_'+b for i,b in enumerate(c)])
+            annot_colnames = ['_'.join([cts_colnames[i]+'_'+b for i, b in enumerate(c)])
                 for c in annot_matrix.columns]
         else:
-            annot_colnames = [cts_colnames[0]+'_'+b for b in annot_matrix.columns]
+            annot_colnames = [cts_colnames[0] + '_' + b for b in annot_matrix.columns]
 
         annot_matrix = np.matrix(annot_matrix)
         keep_snps = None
@@ -303,7 +303,7 @@ def ldscore(args, log):
     if n_annot == 1:
         ldscore_colnames = [col_prefix+scale_suffix]
     else:
-        ldscore_colnames =  [y+col_prefix+scale_suffix for y in annot_colnames]
+        ldscore_colnames = [y+col_prefix+scale_suffix for y in annot_colnames]
 
     # print .ldscore. Output columns: CHR, BP, RS, [LD Scores]
     out_fname = args.out + '.' + file_suffix + '.ldscore'
@@ -322,8 +322,8 @@ def ldscore(args, log):
         log.log('Reading list of {N} SNPs for which to print LD Scores from {F}'.format(\
                         F=args.print_snps, N=len(print_snps)))
 
-        print_snps.columns=['SNP']
-        df = df.ix[df.SNP.isin(print_snps.SNP),:]
+        print_snps.columns = ['SNP']
+        df = df.ix[df.SNP.isin(print_snps.SNP), :]
         if len(df) == 0:
             raise ValueError('After merging with --print-snps, no SNPs remain.')
         else:
@@ -332,7 +332,7 @@ def ldscore(args, log):
 
     l2_suffix = '.gz'
     log.log("Writing LD Scores for {N} SNPs to {f}.gz".format(f=out_fname, N=len(df)))
-    df.drop(['CM','MAF'], axis=1).to_csv(out_fname, sep="\t", header=True, index=False,
+    df.drop(['CM', 'MAF'], axis=1).to_csv(out_fname, sep="\t", header=True, index=False,
         float_format='%.3f')
     call(['gzip', '-f', out_fname])
     if annot_matrix is not None:
@@ -373,13 +373,13 @@ def ldscore(args, log):
     # print correlation matrix including all LD Scores and sample MAF
     log.log('')
     log.log('MAF/LD Score Correlation Matrix')
-    log.log( df.ix[:,4:].corr() )
+    log.log(df.ix[:, 4:].corr())
 
     # print condition number
     if n_annot > 1: # condition number of a column vector w/ nonzero var is trivially one
         log.log('\nLD Score Matrix Condition Number')
-        cond_num = np.linalg.cond(df.ix[:,5:])
-        log.log( reg.remove_brackets(str(np.matrix(cond_num))) )
+        cond_num = np.linalg.cond(df.ix[:, 5:])
+        log.log(reg.remove_brackets(str(np.matrix(cond_num))))
         if cond_num > 10000:
             log.log('WARNING: ill-conditioned LD Score Matrix!')
 
@@ -388,7 +388,7 @@ def ldscore(args, log):
         # covariance matrix
         x = pd.DataFrame(annot_matrix, columns=annot_colnames)
         log.log('\nAnnotation Correlation Matrix')
-        log.log( x.corr() )
+        log.log(x.corr())
 
         # column sums
         log.log('\nAnnotation Matrix Column Sums')
